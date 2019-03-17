@@ -1,0 +1,122 @@
+<br> 
+<center><img src="http://i.imgur.com/sSaOozN.png" width="500"></center>
+
+## Course: Visual Analytics for Policy and Management - Exercise 3 Multivar
+
+### Hanson Shi
+
+## PART1 - Descriptive plots
+
+```{r, eval=TRUE}
+library(openxlsx)
+library(reshape)
+library(ggplot2)
+link2="https://github.com/EvansDataScience/data/raw/master/safeCitiesIndex.xlsx"
+safe2=read.xlsx(link2)
+safe2A=melt(safe2,id.vars = 'city')
+```
+
+
+```{r, fig.width=16, fig.height=25, eval=TRUE}
+base  = ggplot(safe2A, aes(x = variable, y = value, group = city))
+
+plot1 = base + geom_polygon(fill = 'darkgrey',
+                            col='darkorange') + 
+               coord_polar()
+
+plot2 = plot1 + facet_wrap(~reorder(city,value, median, order=TRUE),
+                           ncol = 7)
+
+plot3 = plot2 + theme(axis.text.x = element_text(size = 6, colour = 'black'),
+                legend.position = 'top',
+                strip.text = element_text(size = 20))
+brdBkgnGrid = element_rect(fill = "white",colour = "grey",
+                           size = 2,
+                           linetype = "dashed")
+
+lineGrid = element_line(size = 0.4,
+                        linetype = 'solid',
+                        colour = "steel blue")
+
+plot3 + theme(panel.background = brdBkgnGrid,
+              panel.grid.major = lineGrid,
+              plot.caption = element_text(hjust = 0),
+              plot.title = element_text(hjust = 0.5)) +
+        labs(title='The safety levels of cities in the world', 
+             x="variables", 
+             y="values",
+             caption="Source: Economist - worldbook") 
+                        
+```
+
+
+
+
+## PART2 - Inferential plots
+
+```{r, eval=TRUE}
+library(dotwhisker)
+library(broom)
+library(dplyr)
+library(margins)
+```
+
+```{r, eval=TRUE}
+cut=median(safe2$PERSONAL)
+safe2$PERSONAL_bi=ifelse(safe2$PERSONAL>cut,
+                         1,0)
+logit_PERSONAL = glm(PERSONAL_bi~ .,
+                          data = safe2[,-c(1,5)],
+                          family = "binomial")
+```
+
+```{r, eval=TRUE}
+margins_logit_PERSONAL = margins(logit_PERSONAL) 
+
+marginalSummary=summary(margins_logit_PERSONAL)
+
+base = ggplot(data = marginalSummary)
+
+eff1= base +  geom_point(aes(factor, AME), 
+                         alpha=0.5)
+
+eff2= eff1 + geom_errorbar(aes(x = factor, 
+                               ymin = lower, 
+                               ymax = upper),
+                           colour = c('steelblue','dark red','dark red'))
+
+MESSAGE1="increasing on average \n 1.7% the probability \n of being a safe city"
+
+eff3 = eff2 + geom_hline(yintercept = 0, 
+                         linetype= 'dashed', 
+                         size= 0.5, 
+                         alpha= 0.7) + 
+              theme_minimal()
+             
+eff3 + annotate("text", 
+                x = 1.4, 
+                y = 0.02, 
+                label = MESSAGE1) +
+       labs(title='Marginal effect of coefficients values', 
+            x="Category", 
+            y="Average Marginal Effect",
+            caption='Source: Economist - worldbook') +
+       theme(plot.caption = element_text(hjust = 0),
+             plot.title = element_text(hjust = 0.5)) +
+       annotate("text", 
+                x = 0.7, 
+                y = -0.002, 
+                label = 'reference line') +
+       annotate("text", 
+                x = 2.22, 
+                y = -0.012, 
+                label = 'lower value') +
+       annotate("text", 
+                x = 3.22, 
+                y = 0.01, 
+                label = 'upper value') 
+  
+
+```
+
+
